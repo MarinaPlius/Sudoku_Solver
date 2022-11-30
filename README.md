@@ -4,7 +4,7 @@ Sudoku solver using Optical Character Recognition.
 
 Requirements:
 
-- Python 3
+- Python 3.6
 - Tensorflow
 - OpenCV
 - Pytesseract
