@@ -1,9 +1,9 @@
 # Sudoku solver
 
 To create an environment run:
-´´´
+```
 pip install requirements.txt
-´´´
+```
 
 Sudoku solver using Optical Character Recognition.
 
