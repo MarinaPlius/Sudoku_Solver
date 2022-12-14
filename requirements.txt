@@ -114,7 +114,7 @@ toml @ file:///home/conda/feedstock_root/build_artifacts/toml_1604308577558/work
 tornado @ file:///opt/concourse/worker/volumes/live/cd39df49-5c81-4c95-513c-5bb83298b7ef/volume/tornado_1606942310103/work
 traitlets @ file:///opt/concourse/worker/volumes/live/ab4b852a-8753-4f70-6083-433627bb8c3b/volume/traitlets_1632761183919/work
 typing_extensions @ file:///opt/conda/conda-bld/typing_extensions_1647553014482/work
-ujson==4.0.1
+ujson>=4.0.1
 urllib3==1.26.13
 uvicorn==0.16.0
 uvloop==0.14.0
