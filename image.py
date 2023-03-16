@@ -12,11 +12,9 @@ THETA = np.pi/180
 
 
 class Image():
-	def __init__(self, image):
+	def __init__(self, image, sudoku_size=9):
 		self.original = image
-		self.sudoku_size = 9 #standard
-		self.edge_coordinates = self.get_edge_coordinates()
-		self.number_pics = []
+		self.sudoku_size = sudoku_size
 
 	def get_edge_coordinates(self):
 		"""finds lines in the image and returns a copy of the image with found lines"""
@@ -48,10 +46,10 @@ class Image():
 		        y0 = b*rho
 		        X.append(int(x0))
         		Y.append(int(y0))
-        X = self.reduce_lines(X)
-        Y = self.reduce_lines(Y)
+		X = self.reduce_lines(X)
+		Y = self.reduce_lines(Y)
 
-    def reduce_lines(coordinates):
+	def reduce_lines(coordinates):
 	    """eliminates line duplicates"""
 	    num_lines = self.sudoku_size + 1
 	    Z = sorted(list(set(Z)))

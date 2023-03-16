@@ -4,6 +4,8 @@ import numpy as np
 import cv2
 from starlette.responses import StreamingResponse
 
+from image import Image
+
 app = FastAPI(title="Sudoku Solver API")
 
 @app.get("/")
@@ -31,5 +33,14 @@ async def predict(file: UploadFile = File(...)):
     file_bytes = np.asarray(bytearray(image_stream.read()), dtype=np.uint8)
     image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
-    return StreamingResponse(image_stream, media_type="image/png") 
+    # create an instance of Image
+    image_original = Image(image)
+
+    # Save it in a folder within the server
+    cv2.imwrite(f'images_uploaded/{filename}', image)
+    file_image = open(f'images_uploaded/{filename}', mode="rb")
+    
+    return StreamingResponse(file_image, media_type="image/jpeg")
+
+
 
