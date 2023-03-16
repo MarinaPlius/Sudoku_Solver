@@ -12,18 +12,11 @@ THETA = np.pi/180
 
 
 class Image():
-	def __init__():
-		self.original = None
+	def __init__(self, image):
+		self.original = image
 		self.sudoku_size = 9 #standard
 		self.edge_coordinates = self.get_edge_coordinates()
 		self.number_pics = []
-
-	def read_image(self, path):
-		"""reads an image"""
-		try:
-			self.original = cv2.imread(path)
-		except:
-			logging.info("Error in reading the image!")
 
 	def get_edge_coordinates(self):
 		"""finds lines in the image and returns a copy of the image with found lines"""
