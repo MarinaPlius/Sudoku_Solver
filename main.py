@@ -3,6 +3,7 @@ import io
 import numpy as np
 import cv2
 from starlette.responses import StreamingResponse
+import json
 
 from image import Image
 
@@ -35,13 +36,17 @@ async def predict(file: UploadFile = File(...)):
 
     # create an instance of Image
     image_original = Image(image)
-    first_number = image_original.list_of_number_pictures[0][0]
+    first_number = image_original.use_mnist_model()
+    print(type(first_number))
+    result = json.dumps(first_number.tolist())
 
-    # Save it in a folder within the server
+    """Save it in a folder within the server
     cv2.imwrite(f'images_uploaded/{filename}', first_number)
     file_image = open(f'images_uploaded/{filename}', mode="rb")
     
-    return StreamingResponse(file_image, media_type="image/jpeg")
+    return StreamingResponse(file_image, media_type="image/jpeg")"""
+
+    return result
 
 
 
