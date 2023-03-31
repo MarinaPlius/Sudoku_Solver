@@ -3,6 +3,7 @@ import logging
 import numpy as np
 from copy import deepcopy
 from tensorflow.keras.models import load_model
+import pytesseract
 
 
 WHITE = 255
@@ -137,11 +138,11 @@ class Image():
 		numbers = np.ones(shape=(self.sudoku_size - 1, self.sudoku_size - 1))
 
 		# predict numbers with the model
-		for i in range(len(Y)-1):
-			for j in range(len(X)-1):
-				if matching_numbers[i][j] == 1:
+		for i in range(self.sudoku_size - 1):
+			for j in range(self.sudoku_size - 1):
+				if numbers[i][j] == 1:
 					# resize the image
-					resized_pic = cv2.resize(separated_pics[i][j],(28,28),interpolation = cv2.INTER_CUBIC)
+					resized_pic = cv2.resize(self.list_of_number_pictures[i][j],(28,28),interpolation = cv2.INTER_CUBIC)
 					# clean remains of lines
 					for k in range(28):
 						for l in range(5):
@@ -151,8 +152,32 @@ class Image():
 						for l in range(28):
 							for m in range(3): # left side
 								resized_pic[k][l][m] = 255
-					prediction = number_recognizer_2.predict([[resized_pic.reshape(28,28,3)]])
-					matching_numbers[i][j] = np.argmax(prediction)
+					prediction = number_recognizer.predict([[resized_pic.reshape(28,28,3)]])
+					numbers[i][j] = np.argmax(prediction)
+
+		return numbers
+
+	def use_pytesseract(self):
+
+		# create empty ndarray
+		numbers_tesseract = np.ones(shape=(self.sudoku_size - 1, self.sudoku_size - 1))
+
+		for i in range(self.sudoku_size - 1):
+			for j in range(self.sudoku_size - 1):
+				if sudoku_numbers[i][j] == 1:
+					# recognise a number 
+					result = pytesseract.image_to_string(self.list_of_number_pictures[i][j], config='--psm 7 -c tessedit_char_whitelist=0123456789.%')
+					try:
+						if len(result) > 1:
+							result = result[-1]
+						numbers_tesseract[i][j] = int(result)
+					# in case of an empty cell   
+					except:
+						numbers_tesseract[i][j] = 0
+            
+
+
+
 
 
 
