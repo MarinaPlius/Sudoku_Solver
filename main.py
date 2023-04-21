@@ -36,7 +36,7 @@ async def predict(file: UploadFile = File(...)):
 
     # create an instance of Image
     image_original = Image(image)
-    first_number = image_original.use_model_trained_on_printed_images()
+    first_number = image_original.use_pytesseract()
     result = json.dumps(first_number.tolist())
 
     """Save it in a folder within the server

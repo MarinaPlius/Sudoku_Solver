@@ -174,6 +174,7 @@ class Image():
 					# in case of an empty cell   
 					except:
 						numbers_tesseract[i][j] = 0
+		return numbers_tesseract
             
 
 
