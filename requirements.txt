@@ -2,7 +2,7 @@ anyio==3.6.2
 asgiref==3.4.1
 astor==0.8.1
 async-generator==1.10
-certifi==2021.5.30
+certifi>=2022.12.07
 charset-normalizer==2.0.12
 click==8.0.4
 contextlib2==21.6.0
@@ -24,7 +24,7 @@ jupyter==1.0.0
 mistune==0.8.4
 orjson==3.6.1
 pep8-naming==0.10.0
-protobuf==3.17.2
+protobuf>=3.18.3
 pydantic==1.9.2
 pytesseract==0.3.3
 pytest==6.2.5
@@ -33,7 +33,7 @@ python-multipart==0.0.5
 PyYAML==6.0
 requests==2.27.1
 sniffio==1.2.0
-starlette==0.19.1
+starlette>=0.25.0
 tensorboard==1.13.1
 tensorflow>=1.13.1
 tensorflow-estimator==1.13.0
