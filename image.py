@@ -1,9 +1,9 @@
 import cv2
-import logging
 import numpy as np
 from copy import deepcopy
 from tensorflow.keras.models import load_model
 import pytesseract
+from collections import Counter
 
 
 WHITE = 255
@@ -14,12 +14,18 @@ RHO = 1
 THETA = np.pi/180
 
 
+
 class Image():
 	def __init__(self, image, sudoku_size=9):
 		self.original = image
 		self.sudoku_size = sudoku_size
+		self.horizontal_lines, self.vertical_lines = self.get_lines()
+		self.font_size =  abs(self.horizontal_lines[0] - self.horizontal_lines[1]) // 14 # formula for the best size
 		self.list_of_number_pictures = self.get_list_of_number_pictures()
 		self.empty_cells = self.find_empty_cells()
+		self.predictions = self.use_ensemble_model()
+		self.sudoku_solution = self.get_sudoku_solution(np.copy(self.predictions))
+		self.image_with_solution = self.draw_solution()
 	
 	def reduce_lines(self, coordinates):
 		"""eliminates line duplicates"""
@@ -35,7 +41,7 @@ class Image():
 			coordinates.remove(element_to_remove)
 		return coordinates
 
-	def get_list_of_number_pictures(self):
+	def get_lines(self):
 		"""finds lines in the image
 		returns list of cropped image, where each element is an image of an empty cell or a number"""
 
@@ -69,6 +75,12 @@ class Image():
 
 		X = self.reduce_lines(X)
 		Y = self.reduce_lines(Y)
+
+		return X, Y
+
+	def get_list_of_number_pictures(self):
+		X = self.horizontal_lines
+		Y = self.vertical_lines
 
 		separated_pics = []
 		for y in range(len(Y) -1): 
@@ -126,10 +138,10 @@ class Image():
 			black, white = 0, 255
 		
 		# create empty ndarray
-		cells = np.ones(shape=(self.sudoku_size - 1, self.sudoku_size - 1))
+		cells = np.ones(shape=(self.sudoku_size, self.sudoku_size))
 
-		for i in range(self.sudoku_size - 1):
-			for j in range(self.sudoku_size - 1):
+		for i in range(self.sudoku_size):
+			for j in range(self.sudoku_size):
 				if np.sum((self.list_of_number_pictures[i][j]) == black) < 10:
 					cells[i][j] = 0
 
@@ -146,11 +158,11 @@ class Image():
 		number_recognizer_MNIST = load_model('models/MNIST_digits_recognition.h5', compile=False)
 
 		# create empty ndarray
-		numbers_mnist = np.ones(shape=(self.sudoku_size - 1, self.sudoku_size - 1))
+		numbers_mnist = np.ones(shape=(self.sudoku_size, self.sudoku_size))
 
 		pics = deepcopy(self.list_of_number_pictures)
-		for i in range(self.sudoku_size - 1):
-			for j in range(self.sudoku_size - 1):
+		for i in range(self.sudoku_size):
+			for j in range(self.sudoku_size):
 				pics[i][j] = self.preprocess_cell(pics[i][j], mnist=True, resize=True, clean_remains=True)
 				if self.empty_cells[i][j] != 0:
 					numbers_mnist[i][j] = np.argmax(number_recognizer_MNIST.predict([[pics[i][j].reshape(28,28,1)]]))
@@ -163,13 +175,13 @@ class Image():
 		number_recognizer = load_model('models/Printed_digits_recognition.h5', compile=False)
 
 		# create empty ndarray
-		numbers = np.ones(shape=(self.sudoku_size - 1, self.sudoku_size - 1))
+		numbers = np.ones(shape=(self.sudoku_size, self.sudoku_size))
 
 		pics = deepcopy(self.list_of_number_pictures)
 
 		# predict numbers with the model
-		for i in range(self.sudoku_size - 1):
-			for j in range(self.sudoku_size - 1):
+		for i in range(self.sudoku_size):
+			for j in range(self.sudoku_size):
 				preprocessed_img = self.preprocess_cell(pics[i][j], mnist=False, resize=True, clean_remains=True)
 				prediction = number_recognizer.predict([[preprocessed_img.reshape(28,28,3)]])
 				numbers[i][j] = np.argmax(prediction)
@@ -178,22 +190,122 @@ class Image():
 
 	def use_pytesseract(self):
 
-		# create empty ndarray
-		numbers_tesseract = np.ones(shape=(self.sudoku_size - 1, self.sudoku_size - 1))
+		pics = deepcopy(self.list_of_number_pictures)
 
-		for i in range(self.sudoku_size - 1):
-			for j in range(self.sudoku_size - 1):
+		# create empty ndarray
+		numbers_tesseract = np.zeros(shape=(self.sudoku_size, self.sudoku_size))
+
+		for i in range(self.sudoku_size):
+			for j in range(self.sudoku_size):
 				if self.empty_cells[i][j] != 0:
 					# recognise a number 
-					result = pytesseract.image_to_string(self.list_of_number_pictures[i][j], config='--psm 7 -c tessedit_char_whitelist=0123456789.%')
+					result = pytesseract.image_to_string(self.preprocess_cell(pics[i][j], mnist=True, resize=True, clean_remains=True), config='--psm 7 -c tessedit_char_whitelist=0123456789.%')
 					try:
-						if len(result) > 1:
-							result = result[-1]
-						numbers_tesseract[i][j] = int(result)
+						numbers_tesseract[i][j] = int(result[0])
 					# in case of an empty cell   
 					except:
-						numbers_tesseract[i][j] = 0
+						continue
 		return numbers_tesseract
+	
+	def use_ensemble_model(self):
+		"""
+		gets predictions from all the models and return the most frequent predictions
+		additional weight given to tesseract model in case of all the predictions differ
+		"""
+		#get predictions
+		predictions_mnist = self.use_mnist_model()
+		predictions_print_img = self.use_model_trained_on_printed_images()
+		predictions_tesseract = self.use_pytesseract()
+
+		# create empty ndarray
+		numbers = np.zeros(shape=(self.sudoku_size, self.sudoku_size))
+
+		#find the most frequent
+		for i in range(self.sudoku_size):
+			for j in range(self.sudoku_size):
+				preds = [predictions_mnist[i][j], predictions_print_img[i][j],predictions_tesseract[i][j]]
+				if len(set(preds)) == 3:
+					numbers[i][j] = preds[2]
+				else:
+					occurence_count = Counter(preds)
+					numbers[i][j] = occurence_count.most_common(1)[0][0]
+
+		return numbers
+	
+	
+	def get_sudoku_solution(self, grid):
+		# sudoku solver
+		def find_next_cell_to_fill(grid, i, j):
+			for x in range(i,9):
+					for y in range(j,9):
+							if grid[x][y] == 0:
+									return x,y
+			for x in range(0,9):
+					for y in range(0,9):
+							if grid[x][y] == 0:
+									return x,y
+			return -1,-1
+
+		def is_valid(grid, i, j, e):
+			rowOk = all([e != grid[i][x] for x in range(9)])
+			if rowOk:
+					columnOk = all([e != grid[x][j] for x in range(9)])
+					if columnOk:
+							# finding the top left x,y co-ordinates of the section containing the i,j cell
+							secTopX, secTopY = 3 *(i//3), 3 *(j//3) #floored quotient should be used here. 
+							for x in range(secTopX, secTopX+3):
+									for y in range(secTopY, secTopY+3):
+											if grid[x][y] == e:
+													return False
+							return True
+			return False
+
+		def solve_sudoku(grid, i=0, j=0):
+			i,j = find_next_cell_to_fill(grid, i, j)
+			if i == -1:
+				return True
+			for e in range(1,10):
+				if is_valid(grid,i,j,e):
+					grid[i][j] = e
+					if solve_sudoku(grid, i, j):
+						return True
+					# undo the current cell for backtracking
+					grid[i][j] = 0
+			return False
+		
+		solve_sudoku(grid, i=0, j=0)
+		return grid
+	
+	def draw_solution(self):
+		"""
+		creates a copy of the original image and draws solution on it
+		returns a new image
+		"""
+		new_image = self.original.copy()
+		font = cv2.FONT_HERSHEY_PLAIN
+		green = (0, 255, 0)
+		thickness = 3
+		X = self.horizontal_lines
+		Y = self.vertical_lines
+
+		# draw numbers
+		for i in range(self.sudoku_size):
+			for j in range(self.sudoku_size):
+				if self.predictions[i][j] == 0:
+					cv2.putText(new_image,str(int(self.sudoku_solution[i][j])),(X[j]+5, Y[i+1]), font, self.font_size, green, thickness, cv2.LINE_AA)
+
+		return new_image
+		
+
+
+
+
+
+
+
+
+
+
             
 
 

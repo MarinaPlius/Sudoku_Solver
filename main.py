@@ -36,16 +36,15 @@ async def predict(file: UploadFile = File(...)):
 
     # create an instance of Image
     image_original = Image(image)
-    first_number = image_original.use_pytesseract()
-    result = json.dumps(first_number.tolist())
+    output_image = image_original.image_with_solution
 
-    """Save it in a folder within the server
-    cv2.imwrite(f'images_uploaded/{filename}', first_number)
+    # save it in a folder within the server
+    cv2.imwrite(f'images_uploaded/{filename}', output_image)
     file_image = open(f'images_uploaded/{filename}', mode="rb")
     
-    return StreamingResponse(file_image, media_type="image/jpeg")"""
+    return StreamingResponse(file_image, media_type="image/jpeg")
 
-    return result
+    
 
 
 
